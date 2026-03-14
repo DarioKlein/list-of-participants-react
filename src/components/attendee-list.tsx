@@ -8,6 +8,7 @@ import { TableHeader } from './table/table-header'
 import { TableCell } from './table/table-cell'
 import { TableRow } from './table/table-row'
 import { ChangeEvent, useEffect, useState } from 'react'
+import { faker } from '@faker-js/faker'
 
 dayjs.extend(relativeTime).locale('pt-br')
 
@@ -17,6 +18,17 @@ interface Attendee {
   email: string
   createdAt: string
   checkedInAt: string | null
+}
+
+// Generate mock attendees
+function generateMockAttendees(count: number): Attendee[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: String(i + 1).padStart(6, '0'),
+    name: faker.person.fullName(),
+    email: faker.internet.email().toLowerCase(),
+    createdAt: dayjs().subtract(faker.number.int({ min: 1, max: 30 }), 'day').toISOString(),
+    checkedInAt: faker.datatype.boolean(0.7) ? dayjs().subtract(faker.number.int({ min: 0, max: 10 }), 'hour').toISOString() : null,
+  }))
 }
 
 export function AttendeeList() {
@@ -39,26 +51,30 @@ export function AttendeeList() {
   })
   const [total, setTotal] = useState(0)
   const [attendees, setAttendees] = useState<Attendee[]>([])
+  const [allAttendees] = useState<Attendee[]>(() => generateMockAttendees(250))
   const totalPages = Math.ceil(total / 10)
 
   useEffect(() => {
-    const url = new URL('http://localhost:3333/events/9e9bd979-9d10-4915-b339-3786b1634f33/attendees')
-
-    url.searchParams.set('pageIndex', String(page - 1))
-
+    // Filter attendees based on search
+    let filtered = allAttendees
+    
     if (search.length > 0) {
-      url.searchParams.set('query', search)
+      filtered = allAttendees.filter(
+        attendee => 
+          attendee.name.toLowerCase().includes(search.toLowerCase()) ||
+          attendee.email.toLowerCase().includes(search.toLowerCase()) ||
+          attendee.id.includes(search)
+      )
     }
 
-    async function getData() {
-      const response = await fetch(url)
-      const { attendees, total } = await response.json()
-      setAttendees(attendees)
-      setTotal(total)
-    }
-
-    getData()
-  }, [page, search])
+    const total = filtered.length
+    const pageIndex = page - 1
+    const start = pageIndex * 10
+    const end = start + 10
+    
+    setTotal(total)
+    setAttendees(filtered.slice(start, end))
+  }, [page, search, allAttendees])
 
   function setCurrentSearch(search: string) {
     const url = new URL(window.location.toString())
