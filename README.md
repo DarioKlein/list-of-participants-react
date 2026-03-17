@@ -1,4 +1,4 @@
-# pass.in — Web
+# List of Participants
 
 Interface web do sistema **List of Participants**, uma aplicação para gestão de participantes em eventos presenciais.
 
